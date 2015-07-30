@@ -18,26 +18,157 @@ class Error(Exception):
 class XMLError(Error):
     pass
 
+def parse_xml_inputcfg (xml):
+    """
+        <InputCfg>
+            <Name>
+    """
+
+    index = int(xml.get('id'))
+    title = xml.find('Name').text
+
+    return ('inputs', index, {
+        'title':        title,
+    })
+
+def parse_xml_stillmgr (xml):
+    """
+        <StillMgr>
+            <Still>
+                <Name>
+    """
+
+    for xml_still in xml.findall('Still'):
+        index = int(xml_still.get('id'))
+        title = xml_still.find('Name').text
+
+        yield ('stills', index, {
+            'title':    title,
+        })
+
+def parse_xml_aux_dest_index (xml):
+    return (int(xml.find('OutCfgIndex').text), )
+
+def parse_xml_aux_dest_sources (xml):
+    aux_name = xml.find('Name').text
+    
+    for xml_source in xml.findall('Source'):
+        source_name = xml_source.find('Name').text
+
+        log.debug("%s: Source %s", aux_name, source_name)
+        
+        # XXX: wtf
+        if int(xml_source.get('id')) != 1:
+            continue
+
+        xml_input_index = xml_source.find('InputCfgIndex')
+        xml_still_index = xml_source.find('StillIndex')
+
+        if xml_input_index is None:
+            input_index = None
+        elif xml_input_index.text == '-1':
+            input_index = False
+        else:
+            input_index = int(xml_input_index.text)
+
+            yield ('input', input_index, { })
+
+        if xml_still_index is None :
+            still_index = None
+        elif xml_still_index.text == '-1':
+            still_index = False
+        else:
+            still_index = int(xml_still_index.text)
+
+            yield ('still', still_index, {})
+
 def parse_xml_aux_dest (xml):
     """
         <AuxDest>
             <OutCfgIndex>
             <Name>
+            <Source>
     """
 
-    index = (int(xml.find('OutCfgIndex').text), )
+    index = parse_xml_aux_dest_index(xml)
+    # sources = list(parse_xml_aux_dest_sources(xml)) XXX
 
     return ('destinations', index, {
-            'title': xml.find('Name').text,
+            'title':    xml.find('Name').text,
     })
     
 def parse_xml_screen_dest_index (xml):
     """
-        <ScreenDest><DestOutMapCol><DestOutMap>
-            <OutCfgIndex>
+        <ScreenDest>
+            <DestOutMapCol><DestOutMap>
+                <OutCfgIndex>
     """
     for xml_dest_out_map in xml.find('DestOutMapCol').findall('DestOutMap'):
         yield int(xml_dest_out_map.find('OutCfgIndex').text)
+
+def parse_xml_screen_dest_sources (xml):
+    """
+        <ScreenDest>
+            <LayerCollection><Layer>
+                <PgmMode> <PvwMode>
+                <LayerCfg><Source>
+                    <InputCfgIndex>
+                    <StillIndex>
+    """
+
+    name = xml.find('Name').text
+
+    for xml_layer in xml.find('LayerCollection').findall('Layer'):
+        xml_layer_name = xml_layer.find('Name')
+        
+        if xml_layer_name is None:
+            layer_name = None
+        else:
+            layer_name = xml_layer_name.text
+
+        xml_pgm_mode = xml_layer.find('PgmMode')
+        xml_pvw_mode = xml_layer.find('PvwMode')
+        
+        if xml_pgm_mode is None:
+            program = None
+        else:
+            program = bool(int(xml_pgm_mode.text))
+
+        if xml_pvw_mode is None:
+            preview = None
+        else:
+            preview = bool(int(xml_pvw_mode.text))
+        
+        if not (layer_name or program or preview):
+            continue
+
+        log.debug("%s: Layer %s program=%s preview=%s", name, layer_name, program, preview)
+        
+        for xml_source in xml_layer.find('LayerCfg').findall('Source'):
+            source_name = xml_source.find('Name').text
+        
+            log.debug("%s: Layer %s: Source %s", name, layer_name, source_name)
+
+            xml_input_index = xml_source.find('InputCfgIndex')
+            xml_still_index = xml_source.find('StillIndex')
+
+            if xml_input_index is None:
+                input_index = None
+            elif xml_input_index.text == '-1':
+                input_index = False
+            else:
+                input_index = int(xml_input_index.text)
+
+                yield ('input', input_index, preview, program)
+
+            if xml_still_index is None:
+                still_index = None
+            elif xml_still_index.text == '-1':
+                still_index = False
+            else:
+                still_index = int(xml_still_index.text)
+
+                yield ('still', still_index, preview, program)
 
 def parse_xml_screen_dest (xml):
     """
@@ -45,14 +176,22 @@ def parse_xml_screen_dest (xml):
             <Name>
     """
 
-    index = tuple(
-        int(xml_dest_out_map.find('OutCfgIndex').text)
-            for xml_dest_out_map_col in xml.findall('DestOutMapCol')
-                for xml_dest_out_map in xml_dest_out_map_col.findall('DestOutMap')
-    )
+    out_index = tuple(parse_xml_screen_dest_index(xml))
 
-    return ('destinations', index, {
-            'title': xml.find('Name').text,
+    preview_sources = set()
+    program_sources = set()
+
+    for source_type, source_index, source_preview, source_program in parse_xml_screen_dest_sources(xml):
+        if source_preview:
+            preview_sources.add((source_type, source_index))
+
+        if source_program:
+            program_sources.add((source_type, source_index))
+
+    return ('destinations',     out_index, {
+            'title':            xml.find('Name').text,
+            'preview_sources':  preview_sources,
+            'program_sources':  program_sources,
     })
 
 def parse_xml_settings (xml):
@@ -64,6 +203,9 @@ def parse_xml_settings (xml):
         raise XMLError("Unexpected preset root node: {xml}".format(xml=xml))
 
     xml_dest_mgr = xml.find('DestMgr')
+
+    for xml_source in xml.find('SrcMgr').find('InputCfgCol').findall('InputCfg'):
+       yield parse_xml_inputcfg(xml_source)
 
     for xml_aux_dest_col in xml_dest_mgr.findall('AuxDestCol'):
         for xml_aux_dest in xml_aux_dest_col.findall('AuxDest'):
@@ -88,7 +230,7 @@ def parse_xml_preset (xml):
         index = (int(index_1), int(index_2))
 
     title = xml.find('Name').text
-    destinations = []
+    destinations = collections.defaultdict(set)
 
     if '@' in title:
         title, group = title.split('@')
@@ -96,18 +238,27 @@ def parse_xml_preset (xml):
         group = group.strip()
     else:
         group = None
-
+    
     for xml_screen_dest_col in xml.findall('ScreenDestCol'):
         for xml_screen_dest in xml_screen_dest_col.findall('ScreenDest'):
-            type, destination_index, items = parse_xml_screen_dest(xml_screen_dest)
+            destination_title = xml_screen_dest.find('Name').text
+            destination_index = tuple(parse_xml_screen_dest_index(xml_screen_dest))
 
-            destinations.append(destination_index)
+            for source_type, source_index, source_preview, source_program in parse_xml_screen_dest_sources(xml_screen_dest):
+                if source_program:
+                    log.warning("%s %s: Ignore program sources for destination %s: %s:%s", index, title, destination_title, source_type, source_index)
+                
+                if source_preview:
+                    log.debug("%s %s: Destination %s: Source %s:%s", index, title, destination_title, source_type, source_index)
 
+                    destinations[destination_index].add((source_type, source_index))
+        
     for xml_aux_dest_col in xml.findall('AuxDestCol'):
         for xml_aux_dest in xml_aux_dest_col.findall('AuxDest'):
-            type, destination_index, items = parse_xml_aux_dest(xml_aux_dest)
-
-            destinations.append(destination_index)
+            destination_index = tuple(parse_xml_aux_dest_index(xml_aux_dest))
+            
+            # XXX: aux sources
+            destinations[destination_index] = []
 
     return ('presets', index, {
             'group': group,
@@ -150,6 +301,7 @@ def load_xml_tar (xml_path, stream=False):
 
     xml_settings_file = None
     xml_presets_files = []
+    xml_still_files = []
 
     for path in tar.getnames():
         parts = os.path.normpath(path).split('/')
@@ -159,15 +311,20 @@ def load_xml_tar (xml_path, stream=False):
 
             xml_settings_file = load_xml_file(tar.extractfile(path))
             
-        elif parts[0:2] == ['xml', 'presets'] and len(parts) == 3:
+        elif parts[0:2] == ['xml', 'presets'] and len(parts) == 3 and parts[2].endswith('.xml'):
             log.info("Load tarfile preset file: %s", path)
 
             xml_presets_files.append(load_xml_file(tar.extractfile(path)))
 
+        elif parts[0:2] == ['xml', 'stills'] and len(parts) == 3 and parts[2].endswith('.xml'):
+            log.info("Load tarfile still file: %s", path)
+
+            xml_still_files.append(load_xml_file(tar.extractfile(path)))
+
         else:
             log.info("Skip tarfile: %s", '/'.join(parts))
 
-    return xml_settings_file, xml_presets_files
+    return xml_settings_file, xml_presets_files, xml_still_files
 
 def load_xml_http (xml_path):
     """
@@ -203,15 +360,20 @@ def parse_xml (xml_path):
 
     elif os.path.isdir(xml_path):
         xml_presets_path = os.path.join(xml_path, 'presets')
+        xml_stills_path = os.path.join(xml_path, 'stills')
 
         xml_settings = load_xml_file(open(os.path.join(xml_path, 'settings_backup.xml')))
         xml_presets = [
                 load_xml_file(open(os.path.join(xml_presets_path, name))) 
-                for name in os.listdir(xml_presets_path)
+                for name in os.listdir(xml_presets_path) if name.endswith('.xml')
+        ]
+        xml_stills = [
+                load_xml_file(open(os.path.join(xml_stills_path, name))) 
+                for name in os.listdir(xml_stills_path) if name.endswith('.xml')
         ]
     
     elif xml_path.endswith('.tar.gz'):
-        xml_settings, xml_presets = load_xml_tar(open(xml_path, 'rb'))
+        xml_settings, xml_presets, xml_stills = load_xml_tar(open(xml_path, 'rb'))
 
     else:
         raise XMLError("Unknown xml path: %s" % (xml_path, ))
@@ -220,25 +382,58 @@ def parse_xml (xml_path):
     if xml_settings:
         log.debug("%s", xml_settings)
 
-        for item in parse_xml_settings(xml_settings):
-            yield item
+        yield from parse_xml_settings(xml_settings)
     else:
         raise XMLError("Missing xml_settings.xml file")
     
+    # stills
+    for xml_stillmgr in xml_stills:
+        log.debug("%s", xml_stillmgr)
+
+        yield from parse_xml_stillmgr(xml_stillmgr)
+
     # presets
     for xml_preset in xml_presets:
         log.debug("%s", xml_preset)
 
-        for item in parse_xml_presets(xml_preset):
-            yield item
+        yield from parse_xml_presets(xml_preset)
+
+class Source:
+    pass
+
+class Input(Source):
+    def __init__ (self, index, *, title):
+        self.index = index
+        self.title = title
+
+    def __str__ (self):
+        return "{self.title}".format(self=self)
+
+class Still(Source):
+    def __init__ (self, index, *, title):
+        self.index = index
+        self.title = title
+
+    def __str__ (self):
+        return "{self.title}".format(self=self)
 
 class Destination:
-    def __init__ (self, index, *, title):
+    """
+        index:int                   destination index
+        title:string                human-readable
+        preview_preset:Preset       active preset on preview or None
+        program_preset:Preset       active preset on program or None
+    """
+
+    def __init__ (self, index, preview_sources, program_sources, *, title):
         self.index = index
 
         self.title = title
         
-        self.preview = self.program = None
+        self.preview_sources = preview_sources
+        self.preview_preset = None
+        self.program_sources = program_sources
+        self.program_preset = None
 
     def __lt__ (self, preset):
         return self.title < preset.title 
@@ -372,7 +567,8 @@ class Presets:
 
         return cls(db, **data)
 
-    def __init__ (self, db, destinations, presets):
+    def __init__ (self, db, inputs, stills, destinations, presets):
+        self._sources = { }
         self._destinations = { }
         self._presets = { }
 
@@ -380,8 +576,14 @@ class Presets:
         self.default_group = Group(None, title=None)
 
         # load
+        for index, item in inputs.items():
+            self._load_input(index, **item)
+        
+        for index, item in stills.items():
+            self._load_still(index, **item)
+
         for index, item in destinations.items():
-            self._destinations[index] = Destination(index, **item)
+            self._load_destination(index, **item)
 
         for index, item in presets.items():
             self._load_preset(index, **item)
@@ -416,7 +618,43 @@ class Presets:
         
         return group
 
-    def _load_preset (self, index, group=None, destinations=(), **item):
+    def _load_input (self, index, **attrs):
+        obj = self._sources['input', index] = Input(index, **attrs)
+        
+        log.info("%s: %s", index, obj)
+
+        return obj
+
+    def _load_still (self, index, **attrs):
+        obj = self._sources['still', index] = Still(index, **attrs)
+        
+        log.info("%s: %s", index, obj)
+
+        return obj
+
+    def _load_destination (self, index, preview_sources=None, program_sources=None, **attrs):
+        if preview_sources:
+            preview_sources = [self._sources[sid] for sid in preview_sources] 
+        else:
+            preview_sources = []
+
+        if program_sources:
+            program_sources = [self._sources[sid] for sid in program_sources] 
+        else:
+            program_sources = []
+
+        log.info("%s: %s <- preview=%s program=%s", index, attrs.get('title'),
+                [str(source) for source in preview_sources],
+                [str(source) for source in program_sources],
+        )
+
+        destination = Destination(index, preview_sources, program_sources, **attrs)
+
+        self._destinations[index] = destination
+
+        return destination
+
+    def _load_preset (self, index, group=None, destinations={}, **item):
         """
             Load the given series of { 'preset': int, **opts } into (unique) Preset items.
 
@@ -424,7 +662,11 @@ class Presets:
                 group: Group
         """
 
-        log.info("%s: %s @ %s = %s", index, item.get('title'), group, ' + '.join(str(d) for d in destinations))
+        log.info("%s: %s @ %s -> %s", index,
+                item.get('title'),
+                group,
+                ' '.join('%s(%s)' % ('+'.join(str(o) for o in dest), ' '.join('%s:%s' % sid for sid in sources)) for dest, sources in destinations.items()),
+        )
 
         if index in self._presets:
             raise Error("Duplicate preset: {index} = {item}".format(index=index, item=item))
@@ -434,7 +676,7 @@ class Presets:
         else:
             group = self.default_group
 
-        destinations = [self._destinations[index] for index in destinations]
+        destinations = {self._destinations[index]: [self._sources[sid] for sid in sources] for index, sources in destinations.items()}
         
         preset = Preset(index, group=group, destinations=destinations, **item)
         self._presets[preset.index] = preset # in str format
