@@ -21,6 +21,17 @@ button {
 /* Header */
 #header {
     margin: 0;
+    
+    font-size: x-large;
+    
+    color: #000000;
+}
+
+#header.offline {
+    background-color: #555555;
+}
+
+#header.live {
     background-color: #448844;
 }
 
@@ -28,34 +39,31 @@ button {
     background-color: #aaaa44;
 }
 
-#header.navbar {
-    margin-bottom: 0;
-    border-radius: 0;
+#header .title {
+    font-style: italic;
+}
+
+#header .header-right {
+    float: right;
+}
+
+#header a,
+#header span {
+    display: inline-block;
+    padding: 0.5em;
 }
 
 #header a {
-    color: #000;
-    font-size: x-large;
+    color: inherit;
 }
 
-#header .active a {
+#header a.active {
     font-weight: bold;
+    text-decoration: none;
 }
 
-#header .navbar-right {
-     /* override navbar-right margin-right: -15px */
-     margin: 15px 15px;
-}
-
-#header .safe-mode {
-     color: #884444;
-     font-size: x-large;
-     text-decoration: blink;
-}
-
-#header .safe-mode {
-     color: #444488;
-     font-size: x-large;
+#header a:hover {
+    text-decoration: none;
 }
 
 /* Status */
@@ -104,7 +112,6 @@ button {
         bottom: 0px;
         right: 0px;
         width: 20%;
-
     }
 
     #tools button {
@@ -113,7 +120,7 @@ button {
         margin: 1em auto;
     }
 
-    #header, #presets {
+    #header, #view {
         margin-right: 20%;
     }
 }
@@ -217,8 +224,6 @@ button {
 
 /* Sources */
 .sources .source {
-    display: inline-block;
-
     width: 120px;
     height: 120px;
 
@@ -229,6 +234,8 @@ button {
     border-radius: 4px;
     background-color: #133337;
     color: #ffffff;
+
+    text-align: center;
 }
 
 .sources .source.preview {

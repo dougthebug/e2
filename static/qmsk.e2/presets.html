@@ -1,24 +1,3 @@
-<div id="header" class="navbar" ng-class="{'safe': safe}">
-	<div class="navbar-header">
-		<a class="navbar-brand" href="/">
-			Encore2 Control
-		</a>
-	</div>
-
-	<!-- <div class="navbar-collapse">
-		<ul class="nav navbar-nav">
-
-		</ul>
-	</div> -->
-
-	<p class="navbar-text navbar-right safe-mode" ng-if="safe">
-		SAFE MODE @ {{server}}
-	</p>
-	<p class="navbar-text navbar-right live-mode" ng-if="!safe">
-		LIVE @ {{server}}
-	</p>
-</div>
-
 <div id="tools">
 	<button name="cut" id="cut" type="submit" ng-click="cut()">
 		Cut
@@ -29,7 +8,6 @@
 </div>
 
 <div id="presets" class="presets">
-	<!-- ng-class="{'btn-success': preset == base.inPreview, 'btn-danger': preset == base.inPgm}" -->
 	<div class="group" ng-repeat="group in data.groups" ng-if="group.presets.length > 0">
 		<div class="group-header" ng-click="collapsedGroups[group.title] = !collapsedGroups[group.title]">
 			<button type="button">
@@ -55,8 +33,4 @@
 			</button>
 		</div>
 	</div>
-</div>
-	
-<div id="status">
-	<div ng-repeat="stat in status">{{stat.msg}} {{stat.data}}</div>
-</div>
+</div>	

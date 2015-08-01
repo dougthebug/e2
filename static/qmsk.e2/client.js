@@ -30,18 +30,29 @@ e2client.config(['$routeProvider', function($routeProvider) {
 
 }]);
 
-e2client.controller('PresetsCtrl', function ($scope, $http, $websocket) {
-	$scope.base = {};
-	$scope.base.inPreview = null;
-	$scope.status = [];
-	$scope.seq = 0;
-	$scope.collapsedGroups = {};
-	$scope.server = server;
-
-	$scope.log = function (msg, data) {
+e2client.run(function ($rootScope) {
+	$rootScope.status = [];
+	$rootScope.log = function (msg, data) {
 		console.log(msg, data);
-		$scope.status.unshift({msg: msg, data: data});
+		$rootScope.status.unshift({msg: msg, data: data});
 	};
+	$rootScope.safe = null;
+});
+
+e2client.controller('HeaderCtrl', function ($rootScope, $scope, $location) {
+	$rootScope.server = server;
+	$rootScope.safe = null;
+
+	$scope.isActive = function (location) {
+		return location == $location.path();
+	}
+});
+
+e2client.controller('PresetsCtrl', function ($rootScope, $scope, $http, $websocket) {
+	$scope.data = null;
+	$scope.seq = 0;
+
+	$scope.collapsedGroups = {};
 	
 	// Websocket
 	var ws = $websocket.$new({
@@ -75,7 +86,7 @@ e2client.controller('PresetsCtrl', function ($scope, $http, $websocket) {
 			.success(function(data) {
 				$scope.log("presets update", {seq: data.seq, presets_length: Object.keys(data.presets).length});
 				$scope.data = data;
-				$scope.safe = data.safe;
+				$rootScope.safe = data.safe;
 				$scope.seq = data.seq;
 			}).error(function(err) {
 				$scope.log('presets error', err);
@@ -125,9 +136,14 @@ e2client.controller('PresetsCtrl', function ($scope, $http, $websocket) {
 	$scope.loadPresets();
 });
 
-e2client.controller('SourceCtrl', function ($scope, $http) {
+e2client.controller('SourceCtrl', function ($rootScope, $scope, $http) {
 	$http.get(backendUrl + 'sources/')
 		.success(function(data) {
+			$rootScope.safe = data.safe;
 			$scope.sources = data.sources;
 		});
+});
+
+e2client.controller('StatusCtrl', function ($rootScope) {
+
 });

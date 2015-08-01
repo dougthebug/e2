@@ -30,7 +30,26 @@
 
     <body>
         <div class="container-fluid" id="container">
-            <div ng-view></div>
+            <div id="header"
+                ng-controller="HeaderCtrl"
+                ng-class="{'safe': safe == true, 'live': safe == false, 'offline': safe == null}">
+
+                <a href="/" class="title">Encore2 Control</a>
+                <a href="#/presets" ng-class="{active:isActive('/presets')}">Presets</a>
+                <a href="#/sources" ng-class="{active:isActive('/sources')}">Sources</a>
+
+                <div class="header-right">
+                    <span ng-if="safe == null">OFFLINE</span>
+                    <span ng-if="safe == true">SAFE MODE @ {{server}}</span>
+                    <span ng-if="safe == false">LIVE @ {{server}}</span>
+                </div>
+            </div>
+
+            <div id="view" ng-view></div>
+
+            <div id="status" ng-controller="StatusCtrl">
+                <div ng-repeat="stat in status">{{stat.msg}} {{stat.data}}</div>
+            </div>
         </div>
     </body>
 </html>

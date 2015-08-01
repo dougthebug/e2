@@ -1,8 +1,12 @@
+<div id="tools">
+	&nbsp;
+</div>
+
 <div id="sources" class="sources">
-	<div id="{{ index }}" class="source"
+	<button type="button" class="source"
 		ng-repeat="(index, source) in sources"
 		ng-class="{'preview': source.preview, 'program': source.program}"
 		>
 		{{ source.title }}
-	</div>
+	</button>
 </div>
