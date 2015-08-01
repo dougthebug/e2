@@ -407,8 +407,12 @@ class Input(Source):
     """
 
     def __init__ (self, index, *, title):
-        self.index = index
+        self._index = index
         self.title = title
+
+    @property
+    def index (self):
+        return 'input:{index}'.format(index=self._index)
 
     def __str__ (self):
         return "{self.title}".format(self=self)
@@ -419,8 +423,12 @@ class Still(Source):
     """
 
     def __init__ (self, index, *, title):
-        self.index = index
+        self._index = index
         self.title = title
+
+    @property
+    def index (self):
+        return 'still:{index}'.format(index=self._index)
 
     def __str__ (self):
         return "{self.title}".format(self=self)
@@ -757,6 +765,35 @@ class Presets:
             self.db.close()
    
     # query
+    @property
+    def sources (self):
+        for index, source in sorted(self._sources.items()):
+            yield source
+
+    def preview_sources (self):
+        """
+            Yield any Sources that are active on Destination preview.
+        """
+
+        for destination in self.destinations:
+            preset = destination.preview_preset
+
+            if preset is not None:
+                for source in preset.destinations[destination]:
+                    yield source
+
+    def program_sources (self):
+        """
+            Yield any Sources that are active on Destination program.
+        """
+
+        for destination in self.destinations:
+            preset = destination.program_preset
+
+            if preset is not None:
+                for source in preset.destinations[destination]:
+                    yield source
+
     @property
     def groups (self):
         yield self.default_group
