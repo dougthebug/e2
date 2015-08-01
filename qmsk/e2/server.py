@@ -59,7 +59,7 @@ class Server:
         log.debug("enter")
         
         with (yield from self.lock):
-            active = self.presets.active
+            active = self.presets.active_preset
             
             # seq
             if seq is None:

@@ -33,10 +33,10 @@ class APIBase (qmsk.web.json.JSONMixin, qmsk.web.async.Handler):
         }
        
         for destination in preset.destinations:
-            if preset == destination.program:
+            if preset == destination.program_preset:
                 status = 'program'
 
-            elif preset == destination.preview:
+            elif preset == destination.preview_preset:
                 status = 'preview'
 
             else:
@@ -47,7 +47,7 @@ class APIBase (qmsk.web.json.JSONMixin, qmsk.web.async.Handler):
             if status:
                 out[status] = True
 
-            if preset == self.app.presets.active:
+            if preset == self.app.presets.active_preset:
                 out['active'] = True
         
         return out
@@ -68,8 +68,8 @@ class APIIndex(APIBase):
         return {
                 'outputs': destination.index,
                 'title': destination.title,
-                'preview': destination.preview.index if destination.preview else None,
-                'program': destination.program.index if destination.program else None,
+                'preview': destination.preview_preset.index if destination.preview_preset else None,
+                'program': destination.program_preset.index if destination.program_preset else None,
         }
 
     def render_json(self):
@@ -123,7 +123,7 @@ class APIPreset(APIBase):
         elif preset:
             self.preset = preset
         else:
-            self.preset = self.app.presets.active
+            self.preset = self.app.presets.active_preset
 
     def render_json(self):
         out = {
