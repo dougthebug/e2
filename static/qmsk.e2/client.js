@@ -1,14 +1,34 @@
-var e2client = angular.module('e2client', [
-	'ngWebsocket',
-	'ui.bootstrap'
-]);
-
+/* Config */
 var server = document.location.hostname;
 var apiPort = parseInt(document.location.port);
 var wsPort = apiPort + 1;
 
 var backendUrl = 'http://' + server + ':' + apiPort + '/api/v1/';
 var websocketUrl = 'ws://' + server + ':' + wsPort + '';
+
+/* Angular application */
+var e2client = angular.module('e2client', [
+	'ngRoute',
+	'ngWebsocket',
+	'ui.bootstrap'
+]);
+
+
+e2client.config(['$routeProvider', function($routeProvider) {
+	$routeProvider.
+		when('/presets', {
+			templateUrl: 'qmsk.e2/presets.html',
+			controller: 'PresetsCtrl',
+		}).
+		when('/sources', {
+			templateUrl: 'qmsk.e2/sources.html',
+			controller: 'SourceCtrl',
+		}).
+		otherwise({
+			redirectTo: '/presets',
+		});
+
+}]);
 
 e2client.controller('PresetsCtrl', function ($scope, $http, $websocket) {
 	$scope.base = {};
@@ -103,4 +123,11 @@ e2client.controller('PresetsCtrl', function ($scope, $http, $websocket) {
 
 	// Initialize
 	$scope.loadPresets();
+});
+
+e2client.controller('SourceCtrl', function ($scope, $http) {
+	$http.get(backendUrl + 'sources/')
+		.success(function(data) {
+			$scope.sources = data.sources;
+		});
 });
