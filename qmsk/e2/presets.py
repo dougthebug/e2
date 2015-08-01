@@ -402,6 +402,10 @@ class Source:
     pass
 
 class Input(Source):
+    """
+        External input, used as a source for destination mixer layers.
+    """
+
     def __init__ (self, index, *, title):
         self.index = index
         self.title = title
@@ -410,6 +414,10 @@ class Input(Source):
         return "{self.title}".format(self=self)
 
 class Still(Source):
+    """
+        Still capture, used as a source for destination mixer layers.
+    """
+
     def __init__ (self, index, *, title):
         self.index = index
         self.title = title
@@ -430,10 +438,12 @@ class Destination:
 
         self.title = title
         
-        self.preview_sources = preview_sources
+        # active Presets
         self.preview_preset = None
-        self.program_sources = program_sources
         self.program_preset = None
+
+        self.preview_sources = preview_sources
+        self.program_sources = program_sources
 
     def __lt__ (self, preset):
         return self.title < preset.title 
@@ -447,9 +457,9 @@ class Preset:
                                         old presets will use (0, id)
                                         new ordered presets will use (X, Y) with X > 0
 
-        group:Group                     grouped presets
-        destinations:[Destination]      Destinations included in this preset
-        title:string                    human-readable title
+        group:Group                             grouped presets
+        destinations:{Destination: [Source]}    Destinations included in this preset
+        title:string                            human-readable title
     """
     def __init__ (self, index, group, destinations, *, title):
         self._index = index
@@ -595,28 +605,16 @@ class Presets:
                 dump    = lambda preset: preset.index,
         )
 
-        self.active = self.db_presets.get('active')
+        self.active_preset = self.db_presets.get('active')
 
-        log.info("Active preset: %s", self.active)
+        log.info("Active preset: %s", self.active_preset)
 
         for destination in self._destinations.values():
-            destination.preview = self.db_presets.get('preview', destination.index)
-            destination.program = self.db_presets.get('program', destination.index)
+            destination.preview_preset = self.db_presets.get('preview', destination.index)
+            destination.program_preset = self.db_presets.get('program', destination.index)
 
         # events
         self._notify = set()
-
-    def _load_group (self, title):
-        index = title.lower()
-
-        group = self._groups.get(index)
-
-        if group is None:
-            log.info("%s: %s", index, title)
-
-            group = self._groups[index] = Group(index, title=title)
-        
-        return group
 
     def _load_input (self, index, **attrs):
         obj = self._sources['input', index] = Input(index, **attrs)
@@ -653,6 +651,19 @@ class Presets:
         self._destinations[index] = destination
 
         return destination
+
+    def _load_group (self, title):
+        index = title.lower()
+
+        group = self._groups.get(index)
+
+        if group is None:
+            log.info("%s: %s", index, title)
+
+            group = self._groups[index] = Group(index, title=title)
+        
+        return group
+
 
     def _load_preset (self, index, group=None, destinations={}, **item):
         """
@@ -713,12 +724,12 @@ class Presets:
             Returns the active preset, or None if unknown.
         """
 
-        self.active = self.db_presets['active'] = preset
+        self.active_preset = self.db_presets['active'] = preset
 
         for destination in preset.destinations:
-            log.info("%s: %s -> %s", destination, destination.preview, preset)
+            log.info("%s: %s -> %s", destination, destination.preview_preset, preset)
 
-            destination.preview = self.db_presets['preview', destination.index] = preset
+            destination.preview_preset = self.db_presets['preview', destination.index] = preset
     
         self.notify()
 
@@ -730,12 +741,12 @@ class Presets:
             The currently active preset remains active.
         """
 
-        preset = self.active
+        preset = self.active_preset
         
         for destination in preset.destinations:
-            log.info("%s: %s -> %s", destination, destination.program, preset)
+            log.info("%s: %s -> %s", destination, destination.program_preset, preset)
 
-            destination.program = self.db_presets['program', destination.index] = preset
+            destination.program_preset = self.db_presets['program', destination.index] = preset
         
         self.notify()
 
