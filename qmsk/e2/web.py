@@ -138,11 +138,30 @@ class APIPreset(APIBase):
 
         return out
 
+class APISource(APIBase):
+    def render_json(self):
+        sources = self.app.server.presets.sources
+        preview_sources = set(self.app.server.presets.preview_sources())
+        program_sources = set(self.app.server.presets.program_sources())
+
+        return {
+            'safe':     self.app.server.client.safe,
+            'seq':      self.app.server.seq,
+            'sources':  { source.index: {
+                    'title': source.title,
+                    'preview': (source in preview_sources),
+                    'program': (source in program_sources),
+            } for source in sources },
+            'preview_sources':   [source.index for source in preview_sources],
+            'program_sources':   [source.index for source in program_sources],
+        }
+
 class API(qmsk.web.async.Application):
     URLS = qmsk.web.urls.rules({
         '/v1/':                     APIIndex,
         '/v1/preset/':              APIPreset,
         '/v1/preset/<preset>':      APIPreset,
+        '/v1/sources/':             APISource,
     })
 
     def __init__ (self, server):
