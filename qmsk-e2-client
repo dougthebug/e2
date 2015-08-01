@@ -52,17 +52,23 @@ class Client:
                 self.presets.activate_program()
 
         if args.list:
-            print("  {:5} {:12} {:15} {:}".format("Index", "Group", "Title", "Destinations"))
+            print("    {:7} {:15} {:20} {:}".format("Index", "Group", "Title", "Destinations"))
             for preset in self.presets:
-                if preset == self.presets.active:
-                    flag = ">"
-                else:
-                    flag = ""
+                flags = set()
 
-                print("{flag:1} {preset.index!s:5} {preset.group!s:12} {preset.title!s:15} {dests}".format(
-                    flag    = flag,
-                    preset  = preset,
-                    dests   = ' '.join(str(dest) for dest in preset.destinations),
+                if preset == self.presets.active_preset:
+                    flags.add("=>")
+                elif any (preset == destination.preview_preset for destination in preset.destinations):
+                    flags.add("->")
+                
+                if any(preset == destination.program_preset for destination in preset.destinations):
+                    flags.add("*")
+
+                print("{flags:3} {preset.index!s:7} {group_title!s:15} {preset.title!s:20} {dests}".format(
+                    flags       = ''.join(flags),
+                    preset      = preset,
+                    group_title = preset.group.title if preset.group.title else '',
+                    dests       = ' '.join(str(dest) for dest in preset.destinations),
                 ))
        
         return 0
