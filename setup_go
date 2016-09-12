@@ -1,0 +1,168 @@
+Installing golang and qmsk/e2
+
+These instructions are assuming you are using a Raspberry Pi.  As far as I know these instructions apply to all hardware revisions.
+
+The following software is required to be installed and configured on a Raspberry Pi to use qmsk/e2:
+
+1. git - the version control software that qmsk/e2 is maintained with
+2. go - the go programming language, or golang, is the platform qmsk/e2 is written in
+3. bower - does all the web front end stuff
+4. npm - node package manager provides bower
+5. ssh - the secure shell provides remote access to configure your system from another device without having to attach a keyboard or mouse to your Pi
+6. PiBakery - A simple tool for creating customized boot disks for your raspberry pi.  At some point most of these instructions could be included in a 'recipe' for PiBakery
+
+Begin by downloading and installing PiBakery (or skip this step if you know what you're doing) from http://www.pibakery.org and create a boot image.  You will need about seven gigabytes of disk space.  Use PiBakery to change the password or configure an IP address, although I wont describe that here.
+
+Boot your Pi and connect to it over the network.  There are a number of tools to discover the IP address of the new device if you did not use PiBakery to assign a static IP address.  I will not describe that here.  From the terminal of your laptop or desktop computer, connect to your Pi using ssh like this:
+
+ssh pi@192.168.1.25
+
+The first time you connect to the Pi you will be asked to add the ssh 'fingerprint' to a list kept on your computer.  
+Type 'yes' and then enter the password you set with PiBakery or the default, which is 'raspberry'
+
+The first step, which is not described in the qmsk/e2 readme file is to install go.  You can use any version greater than 1.3, which is unfortunately what is included with the stock Raspberry Pi system.  To install go (or golang, as it's referred to) visit https://golang.org/doc/install and read up.  The short story is to download the precomplied binary for the ARM architecture that the Pi uses and make some directories and save some setting to your .profile file.  This is the hardest part.  Currently, version 1.7 is the latest, so grab the file at https://storage.googleapis.com/golang/go1.7.1.linux-armv6l.tar.gz by typing the following into your command line after logging in to the Pi:
+
+pi@raspberrypi:~ $ wget https://storage.googleapis.com/golang/go1.7.1.linux-armv6l.tar.gz
+
+which looks like this:
+
+pi@raspberrypi:~ $ wget https://storage.googleapis.com/golang/go1.7.1.linux-armv6l.tar.gz
+--2016-09-12 15:28:44--  https://storage.googleapis.com/golang/go1.7.1.linux-armv6l.tar.gz
+Resolving storage.googleapis.com (storage.googleapis.com)... 216.58.192.16, 2607:f8b0:4005:805::2010
+Connecting to storage.googleapis.com (storage.googleapis.com)|216.58.192.16|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 69522921 (66M) [application/x-gzip]
+Saving to: ‘go1.7.1.linux-armv6l.tar.gz’
+
+.7.1.linux-armv6l.t  19%[===>                  ]  12.92M  2.47MB/s   eta 23s   
+
+When this is done you will have to install this file to a system directory with the following command:
+
+pi@raspberrypi:~ $ sudo tar -C /usr/local -xzf go1.7.1.linux-armv6l.tar.gz
+
+Which extracts the files to where they belong.  Now you have to tell the system that this stuff is there by editing some files.  From the golang installation instructions: 
+
+(Typically these commands must be run as root or through sudo.)
+
+Add /usr/local/go/bin to the PATH environment variable. You can do this by adding this line to your /etc/profile (for a system-wide installation) or $HOME/.profile:
+
+export PATH=$PATH:/usr/local/go/bin
+
+You will also need a local workspace to install the source files for qmsk/e2.  Add the line:
+
+export GOPATH=$HOME/work
+
+Then save that file using your favorite text editor.  After you edit and save this file, force the system to read it again by using the source command, i.e.
+
+pi@raspberrypi:~ $ source .profile
+
+Just type the part after the $ or whatever your shell's prompt is.
+
+Be sure to actually create this folder:
+
+pi@raspberrypi:~ $ mkdir work
+
+I highly recommend following the golang tutorial and compiling the hello, world example before continuing.
+
+Now move into the work directory and create another folder, src, and move into it like this:
+
+pi@raspberrypi:~ $ cd work
+pi@raspberrypi:~/work $ mkdir src
+pi@raspberrypi:~/work $ cd src
+pi@raspberrypi:~/work/src $ 
+
+Now we're back to the original readme file.  Install qmsk/e2 with:
+
+git clone https://github.com/qmsk/e2.git
+
+and then cd into the e2 directory and run the go get command from the readme:
+
+go get ./cmd/tally
+go get ./cmd/server
+
+which looks like:
+
+pi@raspberrypi:~/work/src $ git clone https://github.com/qmsk/e2.git
+Cloning into 'e2'...
+remote: Counting objects: 2608, done.
+remote: Total 2608 (delta 0), reused 0 (delta 0), pack-reused 2608
+Receiving objects: 100% (2608/2608), 2.07 MiB | 657.00 KiB/s, done.
+Resolving deltas: 100% (1527/1527), done.
+Checking connectivity... done.
+pi@raspberrypi:~/work/src $ cd e2
+pi@raspberrypi:~/work/src/e2 $ go get ./cmd/tally
+pi@raspberrypi:~/work/src/e2 $ go get ./cmd/server
+
+Now lets install npm and then we'll install bower with npm.  This will take a minute.
+
+sudo apt-get install npm
+
+Whose output looks like this:
+
+pi@raspberrypi:~/work/src/e2 $ sudo apt-get install npm
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following extra packages will be installed:
+  gyp libc-ares-dev libjs-node-uuid libjs-underscore libssl-dev libssl-doc
+  libv8-3.14-dev node-abbrev node-ansi node-ansi-color-table node-archy
+  node-async node-block-stream node-combined-stream node-cookie-jar
+  node-delayed-stream node-forever-agent node-form-data node-fstream
+  node-fstream-ignore node-github-url-from-git node-glob node-graceful-fs
+  node-gyp node-inherits node-ini node-json-stringify-safe node-lockfile
+  node-lru-cache node-mime node-minimatch node-mkdirp node-mute-stream
+  node-node-uuid node-nopt node-normalize-package-data node-npmlog node-once
+  node-osenv node-qs node-read node-read-package-json node-request node-retry
+  node-rimraf node-semver node-sha node-sigmund node-slide node-tar
+  node-tunnel-agent node-underscore node-which nodejs-dev
+Suggested packages:
+  node-hawk node-aws-sign node-oauth-sign node-http-signature
+The following NEW packages will be installed:
+  gyp libc-ares-dev libjs-node-uuid libjs-underscore libssl-dev libssl-doc
+  libv8-3.14-dev node-abbrev node-ansi node-ansi-color-table node-archy
+  node-async node-block-stream node-combined-stream node-cookie-jar
+  node-delayed-stream node-forever-agent node-form-data node-fstream
+  node-fstream-ignore node-github-url-from-git node-glob node-graceful-fs
+  node-gyp node-inherits node-ini node-json-stringify-safe node-lockfile
+  node-lru-cache node-mime node-minimatch node-mkdirp node-mute-stream
+  node-node-uuid node-nopt node-normalize-package-data node-npmlog node-once
+  node-osenv node-qs node-read node-read-package-json node-request node-retry
+  node-rimraf node-semver node-sha node-sigmund node-slide node-tar
+  node-tunnel-agent node-underscore node-which nodejs-dev npm
+0 upgraded, 55 newly installed, 0 to remove and 0 not upgraded.
+Need to get 3,709 kB of archives.
+After this operation, 13.3 MB of additional disk space will be used.
+Do you want to continue? [Y/n] 
+
+
+You should probably update your available packages with
+
+sudo apt-get update
+
+before running the above command.
+
+After your coffee has cooled, install bower by typing
+
+sudo npm install -g bower
+
+which will look like:
+
+pi@raspberrypi:~/work/src/e2 $ sudo npm install -g bower
+/usr/local/bin/bower -> /usr/local/lib/node_modules/bower/bin/bower
+bower@1.7.9 /usr/local/lib/node_modules/bower
+pi@raspberrypi:~/work/src/e2 $ 
+
+Now change directory into static and install bower there like this:
+
+cd static && bower install
+
+Now go back to the original readme and continue from there, knowing you have everything installed!
+
+
+
+
+
+
+
+
+
